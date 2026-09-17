@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+
+# Env files with real secrets
+backend/.env
+data-generator/.env
+frontend/.env.local
+
+# Node
+node_modules/
+.next/
+out/
+
+# Research scratch
+.firecrawl/
+
+# Misc
+.DS_Store
+*.log

@@ -1,0 +1,10 @@
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+
+# OTel SDK
+opentelemetry-sdk==1.28.4
+opentelemetry-exporter-otlp-proto-http==1.28.4
+opentelemetry-semantic-conventions==0.49b4
+
+httpx==0.28.0
+python-dotenv==1.0.1
