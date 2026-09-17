@@ -29,3 +29,14 @@ services:
         sync: false
       - key: PYTHON_VERSION
         value: "3.12"
+
+  - type: web
+    name: northstar-generator
+    runtime: docker
+    rootDir: data-generator
+    plan: free
+    envVars:
+      - key: OTEL_EXPORTER_OTLP_ENDPOINT
+        sync: false
+      - key: OTEL_EXPORTER_OTLP_AUTH
+        sync: false
