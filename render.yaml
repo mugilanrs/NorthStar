@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: northstar-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+      - key: GRAFANA_OTLP_ENDPOINT
+        sync: false
+      - key: GRAFANA_OTLP_AUTH
+        sync: false
+      - key: GRAFANA_API_TOKEN
+        sync: false
+      - key: GRAFANA_INSTANCE_ID
+        value: "1833895"
+      - key: GRAFANA_REGION
+        value: ap-south-1
+      - key: GROQ_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.12"
