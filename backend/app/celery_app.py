@@ -30,11 +30,15 @@ celery.conf.update(
     beat_schedule={
         "discover-entities": {
             "task": "app.workers.entity_discovery.discover_entities",
-            "schedule": 30.0,  # every 30 seconds
+            "schedule": 30.0,
         },
         "evaluate-entity-health": {
             "task": "app.workers.entity_discovery.evaluate_entity_health",
             "schedule": 30.0,
+        },
+        "discover-topology-edges": {
+            "task": "app.workers.entity_discovery.discover_topology_edges",
+            "schedule": 60.0,
         },
     },
 )

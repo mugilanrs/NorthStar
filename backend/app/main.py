@@ -5,7 +5,7 @@ import socketio
 
 from app.config import get_settings
 from app.database import engine, Base
-from app.routers import health, entities, metrics
+from app.routers import health, entities, metrics, topology
 
 settings = get_settings()
 
@@ -45,6 +45,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router, tags=["health"])
     app.include_router(entities.router)
     app.include_router(metrics.router)
+    app.include_router(topology.router)
 
     return app
 

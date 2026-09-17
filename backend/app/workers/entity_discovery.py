@@ -105,6 +105,114 @@ def discover_entities(self):
         raise self.retry(exc=exc, countdown=10)
 
 
+# Known service-to-service call graph (mirrors data-generator/services.py)
+# edge rps values derived from TRAFFIC_PATTERNS weights
+_SERVICE_GRAPH: dict[str, list[tuple[str, float]]] = {
+    "api-gateway": [
+        ("order-service", 0.38),        # view_order + checkout
+        ("inventory-service", 0.83),    # browse_products + checkout
+    ],
+    "order-service": [
+        ("payment-service", 0.13),
+        ("inventory-service", 0.13),
+        ("notification-service", 0.13),
+    ],
+}
+
+
+@celery.task(name="app.workers.entity_discovery.discover_topology_edges", bind=True, max_retries=3)
+def discover_topology_edges(self):
+    """Create/upsert topology edges from known service call graph + live health metrics."""
+    import json as _json
+    try:
+        now = datetime.now(timezone.utc)
+
+        with Session(_engine) as session:
+            rows = session.execute(
+                text("SELECT id, name, labels FROM entities WHERE entity_type = 'service'")
+            ).fetchall()
+
+            if not rows:
+                log.warning("No service entities found; run discover_entities first")
+                return {"edges_created": 0, "edges_updated": 0}
+
+            entity_map = {name: (str(eid), labels) for eid, name, labels in rows}
+            created, updated = 0, 0
+
+            for src_name, downstream in _SERVICE_GRAPH.items():
+                src_entry = entity_map.get(src_name)
+                if not src_entry:
+                    continue
+                src_id, _ = src_entry
+
+                for tgt_name, rps in downstream:
+                    tgt_entry = entity_map.get(tgt_name)
+                    if not tgt_entry:
+                        continue
+                    tgt_id, tgt_labels = tgt_entry
+
+                    labels = tgt_labels if isinstance(tgt_labels, dict) else (
+                        _json.loads(tgt_labels) if tgt_labels else {}
+                    )
+                    error_rate = labels.get("error_rate", 0.0) or 0.0
+                    p99_ms = labels.get("p99_ms", 0.0) or 0.0
+                    call_count_increment = int(rps * 300)  # 5-min window
+
+                    existing = session.execute(
+                        text("""
+                            SELECT id, call_count FROM topology_edges
+                            WHERE source_entity = :src AND target_entity = :tgt
+                        """),
+                        {"src": src_id, "tgt": tgt_id},
+                    ).fetchone()
+
+                    if existing:
+                        session.execute(
+                            text("""
+                                UPDATE topology_edges
+                                SET call_count = :cc, error_rate = :er,
+                                    avg_latency_ms = :lat, last_seen_at = :now
+                                WHERE id = :id
+                            """),
+                            {
+                                "cc": existing[1] + call_count_increment,
+                                "er": error_rate,
+                                "lat": p99_ms / 2,
+                                "now": now,
+                                "id": str(existing[0]),
+                            },
+                        )
+                        updated += 1
+                    else:
+                        session.execute(
+                            text("""
+                                INSERT INTO topology_edges
+                                    (id, source_entity, target_entity, edge_type,
+                                     call_count, error_rate, avg_latency_ms, last_seen_at)
+                                VALUES (:id, :src, :tgt, 'calls', :cc, :er, :lat, :now)
+                            """),
+                            {
+                                "id": str(uuid.uuid4()),
+                                "src": src_id,
+                                "tgt": tgt_id,
+                                "cc": call_count_increment,
+                                "er": error_rate,
+                                "lat": p99_ms / 2,
+                                "now": now,
+                            },
+                        )
+                        created += 1
+
+            session.commit()
+
+        log.info(f"Topology discovery: {created} created, {updated} updated")
+        return {"edges_created": created, "edges_updated": updated}
+
+    except Exception as exc:
+        log.error(f"Topology discovery failed: {exc}")
+        raise self.retry(exc=exc, countdown=10)
+
+
 # Health thresholds
 _ERROR_RATE_DEGRADED = 0.05   # 5%
 _ERROR_RATE_CRITICAL = 0.20   # 20%

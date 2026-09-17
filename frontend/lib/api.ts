@@ -66,6 +66,38 @@ export const metricsApi = {
     ),
 };
 
+// Topology types
+export interface TopologyNode {
+  id: string;
+  name: string;
+  entity_type: string;
+  health_status: "healthy" | "degraded" | "critical" | "unknown";
+  error_rate: number | null;
+  p99_ms: number | null;
+}
+
+export interface TopologyEdge {
+  id: string;
+  source_id: string;
+  target_id: string;
+  source: string;
+  target: string;
+  edge_type: string | null;
+  call_count: number;
+  error_rate: number | null;
+  avg_latency_ms: number | null;
+}
+
+export interface TopologyData {
+  nodes: TopologyNode[];
+  edges: TopologyEdge[];
+}
+
+export const topologyApi = {
+  get: () => apiFetch<TopologyData>("/topology"),
+  seed: () => apiFetch<{ message: string }>("/topology/seed", { method: "POST" }),
+};
+
 export const entities = {
   list: (params?: { entity_type?: string; health_status?: string }) => {
     const qs = params ? "?" + new URLSearchParams(params as Record<string, string>).toString() : "";
