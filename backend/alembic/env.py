@@ -1,5 +1,6 @@
 import asyncio
 from logging.config import fileConfig
+from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
@@ -12,10 +13,14 @@ import app.models  # noqa: F401 — registers all models
 config = context.config
 settings = get_settings()
 
-# Override sqlalchemy.url from env
-_db_url = settings.database_url.replace(
+# Override sqlalchemy.url from env; strip asyncpg-incompatible query params
+_raw = settings.database_url.replace(
     "postgresql://", "postgresql+asyncpg://"
 ).replace("postgres://", "postgresql+asyncpg://")
+_parsed = urlparse(_raw)
+_qs = {k: v for k, v in parse_qs(_parsed.query).items()
+       if k not in ("sslmode", "channel_binding")}
+_db_url = urlunparse(_parsed._replace(query=urlencode(_qs, doseq=True)))
 config.set_main_option("sqlalchemy.url", _db_url)
 
 if config.config_file_name is not None:
@@ -47,7 +52,7 @@ async def run_async_migrations() -> None:
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
-        connect_args={"ssl": "require"},
+        connect_args={"ssl": True},
     )
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
