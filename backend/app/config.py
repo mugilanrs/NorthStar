@@ -23,18 +23,9 @@ class Settings(BaseSettings):
     grafana_api_token: str
     grafana_instance_id: str = "1833895"
     grafana_region: str = "ap-south-1"
-
-    @property
-    def grafana_prometheus_url(self) -> str:
-        return f"https://prometheus-prod-{self.grafana_region}.grafana.net/api/prom"
-
-    @property
-    def grafana_loki_url(self) -> str:
-        return f"https://logs-prod-{self.grafana_region}.grafana.net"
-
-    @property
-    def grafana_tempo_url(self) -> str:
-        return f"https://tempo-prod-{self.grafana_region}.grafana.net"
+    grafana_prometheus_url: str = "https://prometheus-prod-43-prod-ap-south-1.grafana.net/api/prom"
+    grafana_loki_url: str = "https://logs-prod-028.grafana.net"
+    grafana_tempo_url: str = "https://tempo-prod-19-prod-ap-south-1.grafana.net/tempo"
 
     # Groq
     groq_api_key: str
