@@ -1,11 +1,18 @@
-"""Async client for Grafana Cloud Tempo (distributed trace search + retrieval)."""
+"""Async client for Grafana Cloud Tempo via the Grafana datasource proxy.
+
+Proxying through mightytortoise1690.grafana.net avoids needing a separate
+traces:read scoped token — the datasource already has the right credentials.
+"""
 import httpx
 from app.config import get_settings
 
 settings = get_settings()
 
-_AUTH = (settings.grafana_tempo_instance_id, settings.grafana_api_token)
-_BASE = settings.grafana_tempo_url  # https://tempo-prod-19-prod-ap-south-1.grafana.net/tempo
+# Proxy URL: Grafana instance relays to Tempo with its own credentials.
+_GRAFANA_URL = "https://mightytortoise1690.grafana.net"
+_DS_UID = "grafanacloud-traces"
+_PROXY_BASE = f"{_GRAFANA_URL}/api/datasources/proxy/uid/{_DS_UID}"
+_HEADERS = {"Authorization": f"Bearer {settings.grafana_api_token}"}
 
 
 async def search_traces(
@@ -37,9 +44,9 @@ async def search_traces(
 
     async with httpx.AsyncClient(timeout=timeout) as client:
         r = await client.get(
-            f"{_BASE}/api/search",
+            f"{_PROXY_BASE}/api/search",
             params=params,
-            auth=_AUTH,
+            headers=_HEADERS,
         )
         r.raise_for_status()
         return r.json()
@@ -49,9 +56,8 @@ async def get_trace(trace_id: str, timeout: int = 15) -> dict:
     """Fetch full trace (all spans) by hex trace ID."""
     async with httpx.AsyncClient(timeout=timeout) as client:
         r = await client.get(
-            f"{_BASE}/api/traces/{trace_id}",
-            auth=_AUTH,
-            headers={"Accept": "application/json"},
+            f"{_PROXY_BASE}/api/traces/{trace_id}",
+            headers={**_HEADERS, "Accept": "application/json"},
         )
         r.raise_for_status()
         return r.json()
