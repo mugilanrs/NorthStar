@@ -98,6 +98,57 @@ export const topologyApi = {
   seed: () => apiFetch<{ message: string }>("/topology/seed", { method: "POST" }),
 };
 
+// Trace types
+export interface TraceSearchResult {
+  trace_id: string;
+  root_service: string;
+  root_name: string;
+  start_ms: number;
+  duration_ms: number;
+  status: "ok" | "error" | "unset";
+  span_count: number;
+}
+
+export interface Span {
+  span_id: string;
+  parent_id: string | null;
+  service: string;
+  operation: string;
+  start_ms: number;
+  duration_ms: number;
+  status: "ok" | "error" | "unset";
+  attributes: Record<string, string>;
+}
+
+export interface TraceDetail {
+  trace_id: string;
+  start_ms: number;
+  duration_ms: number;
+  service_count: number;
+  spans: Span[];
+}
+
+export const tracesApi = {
+  search: (params: {
+    service?: string;
+    status?: string;
+    minDuration?: string;
+    limit?: number;
+    start?: number;
+    end?: number;
+  }) => {
+    const qs = new URLSearchParams();
+    if (params.service) qs.set("service", params.service);
+    if (params.status) qs.set("status", params.status);
+    if (params.minDuration) qs.set("minDuration", params.minDuration);
+    if (params.limit) qs.set("limit", String(params.limit));
+    if (params.start) qs.set("start", String(params.start));
+    if (params.end) qs.set("end", String(params.end));
+    return apiFetch<{ traces: TraceSearchResult[] }>(`/traces/search?${qs}`);
+  },
+  get: (traceId: string) => apiFetch<TraceDetail>(`/traces/${traceId}`),
+};
+
 export const entities = {
   list: (params?: { entity_type?: string; health_status?: string }) => {
     const qs = params ? "?" + new URLSearchParams(params as Record<string, string>).toString() : "";
