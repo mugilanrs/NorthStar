@@ -4,8 +4,8 @@ from app.config import get_settings
 
 settings = get_settings()
 
-_AUTH = (settings.grafana_instance_id, settings.grafana_api_token)
-_BASE = settings.grafana_tempo_url  # https://tempo-prod-ap-south-1.grafana.net
+_AUTH = (settings.grafana_tempo_instance_id, settings.grafana_api_token)
+_BASE = settings.grafana_tempo_url  # https://tempo-prod-19-prod-ap-south-1.grafana.net/tempo
 
 
 async def search_traces(
