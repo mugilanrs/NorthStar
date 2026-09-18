@@ -37,6 +37,6 @@ services:
     plan: free
     envVars:
       - key: OTEL_EXPORTER_OTLP_ENDPOINT
-        sync: false
+        value: "https://otlp-gateway-prod-ap-south-1.grafana.net/otlp"
       - key: OTEL_EXPORTER_OTLP_AUTH
         sync: false
